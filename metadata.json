@@ -1,0 +1,9 @@
+{
+  "name": "Mova Studio",
+  "description": "An AI-powered video generation studio that transforms audio, images, and text into cinematic videos.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": []
+}
