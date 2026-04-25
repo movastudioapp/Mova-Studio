@@ -1,32 +1,64 @@
 import { useState, useEffect } from 'react';
 import { Home, Sparkles, Compass, Library, User, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '../auth/AuthProvider';
+import { useApp } from '../context/AppContext';
 import HomeScreen from '../../screens/HomeScreen';
 import CreateScreen from '../../screens/CreateScreen';
 import ExploreScreen from '../../screens/ExploreScreen';
 import AssetsScreen from '../../screens/AssetsScreen';
 import ProfileScreen from '../../screens/ProfileScreen';
+import LoginScreen from '../../screens/LoginScreen';
 
 type Tab = 'home' | 'create' | 'explore' | 'assets' | 'profile';
 
 export default function MainLayout() {
+  const { user, loading } = useAuth();
+  const { sidebarExpanded, setSidebarExpanded } = useApp();
   const [activeTab, setActiveTab] = useState<Tab>('home');
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
 
   // Auto-collapse sidebar on tablet
   useEffect(() => {
     const checkWidth = () => {
       if (window.innerWidth < 1024) {
-        setIsSidebarExpanded(false);
-      } else {
-        setIsSidebarExpanded(true);
+        setSidebarExpanded(false);
       }
     };
     
     checkWidth();
     window.addEventListener('resize', checkWidth);
     return () => window.removeEventListener('resize', checkWidth);
-  }, []);
+  }, [setSidebarExpanded]);
+
+  if (loading) {
+    return (
+      <div className="flex h-[100dvh] w-full bg-[#05050D] items-center justify-center">
+        <motion.div 
+          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.7, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="w-16 h-16 rounded-3xl bg-purple-500/20 flex items-center justify-center"
+        >
+          <div className="w-8 h-8 border-2 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div 
+          key="login"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, scale: 1.1, filter: 'blur(20px)' }}
+          className="flex h-[100dvh] w-full bg-[#05050D] text-white overflow-hidden relative"
+        >
+          <LoginScreen />
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
 
   const navItems = [
     { id: 'home', label: 'Feed', icon: Home },
@@ -48,34 +80,59 @@ export default function MainLayout() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#05050D] text-white overflow-hidden relative">
+    <motion.div 
+      initial={{ opacity: 0, filter: 'blur(20px)' }}
+      animate={{ opacity: 1, filter: 'blur(0px)' }}
+      className="flex h-[100dvh] w-full bg-[#05050D] text-white overflow-hidden relative"
+    >
       {/* Abstract Background Glows */}
-      <div className="absolute top-[-200px] right-[-200px] w-[600px] h-[600px] bg-purple-600/20 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[-100px] left-[100px] w-[500px] h-[500px] bg-blue-600/10 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute top-[-200px] right-[-200px] w-[600px] h-[600px] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-100px] left-[100px] w-[500px] h-[500px] bg-blue-600/5 blur-[100px] rounded-full pointer-events-none" />
 
       {/* Desktop & Tablet Sidebar */}
       <aside 
         className={`hidden md:flex flex-col h-full bg-black/40 backdrop-blur-xl border-r border-white/5 z-50 py-6 transition-all duration-300 relative ${
-          isSidebarExpanded ? 'w-[240px]' : 'w-[80px]'
+          sidebarExpanded ? 'w-[240px]' : 'w-[80px]'
         }`}
       >
         <button 
-          onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+          onClick={() => setSidebarExpanded(!sidebarExpanded)}
           className="absolute -right-3 top-8 w-6 h-6 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full flex items-center justify-center z-50 transition-colors"
         >
-          {isSidebarExpanded ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          {sidebarExpanded ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         </button>
 
-        <div className={`flex items-center mb-10 px-6 ${isSidebarExpanded ? 'gap-3' : 'justify-center px-0'}`}>
-          <div className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.4)]">
-            <span className="font-black text-xl">M</span>
+        <div className={`flex items-center mb-10 px-6 ${sidebarExpanded ? 'gap-3' : 'justify-center px-0'}`}>
+          <div className="shrink-0 w-10 h-10 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(168,85,247,0.4)] bg-black/20 flex items-center justify-center p-1.5">
+            <img 
+              src="/input_file_1.png" 
+              alt="Mova" 
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                if (e.currentTarget.src.includes('input_file_1')) {
+                  e.currentTarget.src = '/input_file_0.png';
+                  return;
+                }
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  const existingFallback = parent.querySelector('.fallback-m');
+                  if (!existingFallback) {
+                    const fallback = document.createElement('div');
+                    fallback.className = 'fallback-m w-full h-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center';
+                    fallback.innerHTML = '<span class="font-black text-xl text-white">M</span>';
+                    parent.appendChild(fallback);
+                  }
+                }
+              }}
+            />
           </div>
-          {isSidebarExpanded && (
+          {sidebarExpanded && (
             <h1 className="text-xl font-bold tracking-tight text-white/90 truncate">Mova Studio</h1>
           )}
         </div>
 
-        <nav className={`flex-1 flex flex-col gap-4 ${isSidebarExpanded ? 'px-4' : 'items-center'}`}>
+        <nav className={`flex-1 flex flex-col gap-4 ${sidebarExpanded ? 'px-4' : 'items-center'}`}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -84,8 +141,8 @@ export default function MainLayout() {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                title={!isSidebarExpanded ? item.label : undefined}
-                className={`relative flex items-center ${isSidebarExpanded ? 'gap-4 px-4 py-3 w-full' : 'justify-center w-12 h-12'} rounded-xl transition-all duration-300 group ${
+                title={!sidebarExpanded ? item.label : undefined}
+                className={`relative flex items-center ${sidebarExpanded ? 'gap-4 px-4 py-3 w-full' : 'justify-center w-12 h-12'} rounded-xl transition-all duration-300 group ${
                   isActive ? 'text-purple-400' : 'text-white/40 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -96,11 +153,11 @@ export default function MainLayout() {
                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                   />
                 )}
-                {isActive && isSidebarExpanded && (
+                {isActive && sidebarExpanded && (
                   <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-1 h-6 bg-purple-500 rounded-full" />
                 )}
                 <Icon className={`w-5 h-5 relative z-10 transition-colors shrink-0 ${isActive ? 'text-purple-400' : ''}`} />
-                {isSidebarExpanded && (
+                {sidebarExpanded && (
                   <span className="font-medium text-sm tracking-wide relative z-10">{item.label}</span>
                 )}
               </button>
@@ -108,20 +165,20 @@ export default function MainLayout() {
           })}
         </nav>
 
-        <div className={`mt-auto ${isSidebarExpanded ? 'px-4' : 'px-2 flex justify-center'}`}>
+        <div className={`mt-auto ${sidebarExpanded ? 'px-4' : 'px-2 flex justify-center'}`}>
           <button 
             onClick={() => setActiveTab('create')}
             className={`relative group overflow-hidden rounded-xl p-[1px] transition-transform active:scale-95 ${
-              isSidebarExpanded ? 'w-full' : 'w-12 h-12'
+              sidebarExpanded ? 'w-full' : 'w-12 h-12'
             }`}
-            title={!isSidebarExpanded ? 'Generate New' : undefined}
+            title={!sidebarExpanded ? 'Generate New' : undefined}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 opacity-80 group-hover:opacity-100 transition-opacity" />
             <div className={`relative bg-black/50 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/10 ${
-              isSidebarExpanded ? 'px-4 py-3 gap-2' : 'w-full h-full'
+              sidebarExpanded ? 'px-4 py-3 gap-2' : 'w-full h-full'
             }`}>
               <Sparkles className="w-4 h-4 text-purple-400 shrink-0" />
-              {isSidebarExpanded && (
+              {sidebarExpanded && (
                 <span className="font-bold text-sm tracking-wide text-white">Generate</span>
               )}
             </div>
@@ -130,7 +187,7 @@ export default function MainLayout() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 relative h-full flex flex-col overflow-hidden pb-16 md:pb-0 z-10 bg-transparent">
+      <main className="flex-1 relative h-full w-full flex flex-col overflow-y-auto overflow-x-hidden md:overflow-hidden pb-nav-safe md:pb-0 z-10 bg-transparent">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -185,6 +242,6 @@ export default function MainLayout() {
           })}
         </div>
       </nav>
-    </div>
+    </motion.div>
   );
 }
